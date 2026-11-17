@@ -332,6 +332,11 @@
     $('lvHours').value = '';
   }
   $('lvKind').addEventListener('change', unitUI);
+  (function () { // 請假／外出的開始、結束預設為今天 08:30、18:00
+    var d = new Date(), day = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    $('lvStart').value = day + 'T08:30';
+    $('lvEnd').value = day + 'T18:00';
+  })();
   function submit(btnId, msgId, fn, payload, done) {
     $(btnId).disabled = true; setMsg(msgId, '送出中…');
     run(fn, payload).then(function (r) {
