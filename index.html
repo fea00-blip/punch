@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1F3A68">
+<title>部門打卡</title>
+<style>
+  :root { --navy:#1F3A68; --bg:#F4F6FA; --card:#FFFFFF; --line:#D9DEE8; --ok:#1B7F4B; --bad:#B3261E; --muted:#667085; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif; background:var(--bg); color:#1B2433; font-size:16px; }
+  header { background:var(--navy); color:#fff; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; }
+  header .who { font-size:15px; }
+  nav { display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; }
+  nav button { flex:1; padding:12px 4px; border:0; background:none; font-size:15px; color:var(--muted); border-bottom:3px solid transparent; }
+  nav button.on { color:var(--navy); border-bottom-color:var(--navy); font-weight:700; }
+  main { max-width:720px; margin:0 auto; padding:16px; }
+  section { display:none; }
+  section.on { display:block; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  h3 { margin:0 0 10px; font-size:16px; color:var(--navy); }
+  .clock { text-align:center; font-size:44px; font-variant-numeric:tabular-nums; font-weight:700; color:var(--navy); margin:8px 0 2px; }
+  .date { text-align:center; color:var(--muted); margin-bottom:16px; }
+  .btns { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .btns button { padding:22px 8px; font-size:20px; font-weight:700; border:0; border-radius:12px; color:#fff; }
+  .pin { background:var(--ok); } .pout { background:var(--navy); }
+  button:disabled { opacity:.5; }
+  .msg { min-height:24px; margin-top:12px; text-align:center; }
+  .msg.ok { color:var(--ok); font-weight:700; } .msg.bad { color:var(--bad); }
+  .note { color:var(--muted); font-size:13px; line-height:1.6; }
+  ul.list { list-style:none; margin:0; padding:0; }
+  ul.list li { padding:8px 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:8px; }
+  ul.list li:last-child { border-bottom:0; }
+  label { display:block; font-size:14px; color:var(--muted); margin:10px 0 4px; }
+  input, select, textarea { width:100%; max-width:100%; min-width:0; padding:10px; font-size:16px; border:1px solid var(--line); border-radius:8px; background:#fff; font-family:inherit; }
+  input[type="datetime-local"], input[type="date"], input[type="time"], input[type="month"] { -webkit-appearance:none; appearance:none; min-height:44px; }
+  .row2 { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; }
+  .row2 > div { min-width:0; }
+  @media (max-width:520px) { .row2 { grid-template-columns:minmax(0,1fr); gap:0; } }
+  .act { margin-top:14px; width:100%; padding:12px; font-size:16px; font-weight:700; border:0; border-radius:8px; background:var(--navy); color:#fff; }
+  .small { padding:6px 12px; font-size:14px; border-radius:6px; border:1px solid var(--line); background:#fff; }
+  .small.go { background:var(--ok); color:#fff; border-color:var(--ok); }
+  .small.no { color:var(--bad); border-color:var(--bad); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th { background:var(--navy); color:#fff; text-align:left; padding:8px 6px; }
+  td { padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; background:#E8ECF4; color:var(--navy); }
+  .tag.ok { background:#DFF3E8; color:var(--ok); } .tag.bad { background:#FBE4E2; color:var(--bad); }
+  .item { padding:12px 0; border-bottom:1px solid var(--line); }
+  .item:last-child { border-bottom:0; }
+  .item .t { font-weight:700; } .item .d { color:var(--muted); font-size:14px; margin:4px 0 8px; }
+  .scroll { overflow-x:auto; }
+</style>
+</head>
+<body>
+<header><div class="who" id="who">載入中…</div><div id="hdate"></div></header>
+<nav id="nav" style="display:none">
+  <button data-tab="punch" class="on">打卡</button>
+  <button data-tab="mine">我的紀錄</button>
+  <button data-tab="apply">申請</button>
+  <button data-tab="mgr" id="navMgr" style="display:none">主管</button>
+</nav>
+<main>
+
+<section id="tab-login" class="on">
+  <div class="card">
+    <h3>登入</h3>
+    <label>員工編號</label><input id="lgId" autocomplete="username" autocapitalize="off">
+    <label>密碼</label><input id="lgPw" type="password" autocomplete="current-password">
+    <div id="lgNewBox" style="display:none">
+      <label>首次登入，請設定自己的新密碼（至少 6 碼）</label><input id="lgNew" type="password" autocomplete="new-password">
+    </div>
+    <button class="act" id="btnLogin">登入</button>
+    <div class="msg" id="lgMsg"></div>
+    <p class="note">登入後帳號會綁定這支手機的這個瀏覽器，之後開啟不必再輸入密碼。在別的裝置登入時，原裝置會自動登出並留下紀錄。忘記密碼請洽主管重設。</p>
+  </div>
+</section>
+
+<section id="tab-punch">
+  <div class="card">
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="date" id="today"></div>
+    <div class="btns">
+      <button class="pin" id="btnIn">上班打卡</button>
+      <button class="pout" id="btnOut">下班打卡</button>
+    </div>
+    <div class="msg" id="punchMsg"></div>
+  </div>
+  <div class="card">
+    <h3>今日打卡紀錄</h3>
+    <ul class="list" id="todayList"><li>載入中…</li></ul>
+  </div>
+  <p class="note">打卡時系統會讀取一次手機定位，僅用於確認位於辦公室 <span id="radius">150</span> 公尺範圍內，並與打卡時間一併存為出勤紀錄。打卡時間以伺服器時間為準。</p>
+</section>
+
+<section id="tab-mine">
+  <div class="card">
+    <label>月份</label>
+    <input type="month" id="mineMonth">
+    <button class="act" id="btnMine">查詢</button>
+  </div>
+  <div class="card"><h3>打卡紀錄</h3><div class="scroll" id="minePunch"></div></div>
+  <div class="card"><h3>申請紀錄</h3><div id="mineApps"></div></div>
+  <p class="note">需要出勤紀錄副本時，可請主管匯出當月月報提供。</p>
+</section>
+
+<section id="tab-apply">
+  <div class="card">
+    <h3>請假／外出</h3>
+    <label>假別</label><select id="lvKind"></select>
+    <div class="row2">
+      <div><label>開始</label><input type="datetime-local" id="lvStart"></div>
+      <div><label>結束</label><input type="datetime-local" id="lvEnd"></div>
+    </div>
+    <label id="lvUnit">天數（天，可填 0.5）</label><input type="number" id="lvHours" min="0.5" step="0.5" placeholder="例如 1">
+    <label>事由</label><textarea id="lvReason" rows="2"></textarea>
+    <button class="act" id="btnLeave">送出請假／外出申請</button>
+    <div class="msg" id="lvMsg"></div>
+  </div>
+  <div class="card">
+    <h3>加班</h3>
+    <label>日期</label><input type="date" id="otDate">
+    <div class="row2">
+      <div><label>開始</label><input type="time" id="otStart"></div>
+      <div><label>結束</label><input type="time" id="otEnd"></div>
+    </div>
+    <label>事由</label><textarea id="otReason" rows="2"></textarea>
+    <button class="act" id="btnOT">送出加班申請</button>
+    <div class="msg" id="otMsg"></div>
+  </div>
+  <div class="card">
+    <h3>補打卡（忘記打卡）</h3>
+    <div class="row2">
+      <div><label>類型</label><select id="fxType"><option>上班</option><option>下班</option></select></div>
+      <div><label>實際時間</label><input type="datetime-local" id="fxTime"></div>
+    </div>
+    <label>原因</label><textarea id="fxReason" rows="2"></textarea>
+    <button class="act" id="btnFix">送出補打卡申請</button>
+    <div class="msg" id="fxMsg"></div>
+    <p class="note">補打卡經主管核准後才會寫入出勤紀錄，並註記為補登與核准人。</p>
+  </div>
+</section>
+
+<section id="tab-mgr">
+  <div class="card"><h3>待審核</h3><div id="pending">載入中…</div></div>
+  <div class="card"><h3>今日出勤</h3><div class="scroll" id="todayAll"></div></div>
+  <div class="card">
+    <h3>帳號管理</h3>
+    <div class="scroll" id="staff"></div>
+    <p class="note">「重設」會產生一組新的一次性初始密碼，並解除裝置綁定與鎖定，請轉告當事人，首次登入時須自行改密碼。新增或停用人員請到試算表「員工」工作表。</p>
+  </div>
+  <div class="card">
+    <h3>月報</h3>
+    <label>月份</label><input type="month" id="rptMonth">
+    <button class="act" id="btnRpt">產出月報</button>
+    <div class="msg" id="rptMsg"></div>
+  </div>
+  <div class="card">
+    <h3>辦公室座標</h3>
+    <div id="officeInfo" class="note"></div>
+    <button class="act" id="btnOffice">以我目前位置設為辦公室</button>
+    <div class="msg" id="officeMsg"></div>
+    <p class="note">請站在辦公室內、定位穩定時再按。圍欄半徑等其他設定請到試算表「設定」工作表修改。</p>
+  </div>
+</section>
+
+</main>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var API_URL = 'https://script.google.com/macros/s/AKfycbxRxu24LoBNA5MYDFWzcLLanavZACQuZPU6fvJBmGbKzx8JkxtQHTim1FqFL45WIHWRtw/exec';
+  var TOKEN = '';
+  try { TOKEN = localStorage.getItem('punchToken') || ''; } catch (e) {}
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function run(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (fn !== 'api_login') args.unshift(TOKEN);
+    // 不帶任何 Google 登入資訊（credentials: 'omit'），瀏覽器登入幾個 Google 帳號都不影響
+    return fetch(API_URL, {
+      method: 'POST', credentials: 'omit', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn: fn, args: args })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('伺服器回應異常（' + r.status + '），請稍後再試');
+      return r.json();
+    }, function () {
+      throw new Error('無法連線，請檢查網路後再試');
+    }).then(function (o) {
+      if (!o || !o.ok) throw new Error(o && o.error ? o.error : '伺服器回應異常，請稍後再試');
+      return o.data;
+    }).catch(function (e) {
+      if (fn !== 'api_login' && /重新登入/.test(errText(e))) toLogin(errText(e));
+      throw e;
+    });
+  }
+  function errText(e) { return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/, ''); }
+  function setMsg(id, text, cls) { var el = $(id); el.textContent = text; el.className = 'msg ' + (cls || ''); }
+  function statusTag(s) { var c = s === '已核准' ? 'ok' : (s === '已退回' ? 'bad' : ''); return '<span class="tag ' + c + '">' + esc(s) + '</span>'; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function thisMonth() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1); }
+
+  /* 分頁 */
+  var loaded = {};
+  document.querySelectorAll('nav button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('nav button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      document.querySelectorAll('section').forEach(function (s) { s.classList.toggle('on', s.id === 'tab-' + b.dataset.tab); });
+      if (b.dataset.tab === 'mine' && !loaded.mine) loadMine();
+      if (b.dataset.tab === 'mgr') loadMgr();
+    });
+  });
+
+  /* 時鐘 */
+  var WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+  function tick() {
+    var d = new Date();
+    $('clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    $('today').textContent = d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日（' + WEEK[d.getDay()] + '）';
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* 初始化 */
+  function renderToday(list) {
+    $('todayList').innerHTML = list.length ? list.map(function (p) {
+      return '<li><span>' + esc(p.type) + (String(p.src).indexOf('補登') === 0 ? ' <span class="tag">補登</span>' : '') + '</span><b>' + esc(p.time) + '</b></li>';
+    }).join('') : '<li>今天還沒有打卡紀錄</li>';
+  }
+  function start() {
+  show('punch'); setMsg('punchMsg', '');
+  run('api_init').then(function (d) {
+    $('who').textContent = d.me.name + '｜上班 ' + d.me.start + '－' + d.me.end;
+    $('radius').textContent = d.radius;
+    renderToday(d.today);
+    $('lvKind').innerHTML = d.leaveKinds.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('');
+    unitUI();
+    if (d.me.isManager) $('navMgr').style.display = '';
+    if (!d.officeSet) setMsg('punchMsg', '主管尚未設定辦公室座標，暫時無法打卡', 'bad');
+  }).catch(function (e) { if (TOKEN) setMsg('punchMsg', errText(e), 'bad'); });
+  }
+
+  /* 登入 */
+  function show(tab) {
+    $('nav').style.display = tab === 'login' ? 'none' : '';
+    document.querySelectorAll('section').forEach(function (s) { s.classList.toggle('on', s.id === 'tab-' + tab); });
+    document.querySelectorAll('nav button').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === tab); });
+  }
+  function toLogin(msg) {
+    TOKEN = ''; loaded = {};
+    try { localStorage.removeItem('punchToken'); } catch (e) {}
+    $('who').textContent = '部門打卡'; $('navMgr').style.display = 'none';
+    show('login');
+    if (msg) setMsg('lgMsg', msg, 'bad');
+  }
+  $('btnLogin').addEventListener('click', function () {
+    $('btnLogin').disabled = true; setMsg('lgMsg', '登入中…');
+    run('api_login', $('lgId').value, $('lgPw').value, $('lgNew').value).then(function (r) {
+      if (r.needNewPassword) {
+        $('lgNewBox').style.display = '';
+        setMsg('lgMsg', '這是首次登入，請在下方設定自己的新密碼，再按一次登入');
+        return;
+      }
+      TOKEN = r.token;
+      try { localStorage.setItem('punchToken', TOKEN); } catch (e) {}
+      $('lgPw').value = $('lgNew').value = ''; $('lgNewBox').style.display = 'none'; setMsg('lgMsg', '');
+      start();
+    }).catch(function (e) { setMsg('lgMsg', errText(e), 'bad'); })
+      .then(function () { $('btnLogin').disabled = false; });
+  });
+  $('who').textContent = '部門打卡';
+  if (TOKEN) start(); else show('login');
+  $('mineMonth').value = $('rptMonth').value = thisMonth();
+
+  /* 定位 */
+  function locate() {
+    return new Promise(function (res, rej) {
+      if (!navigator.geolocation) return rej(new Error('此瀏覽器不支援定位'));
+      navigator.geolocation.getCurrentPosition(function (pos) { res(pos.coords); }, function (err) {
+        var t = { 1: '請允許此網頁使用定位（瀏覽器與手機設定都要開啟）', 2: '目前無法取得定位，請確認已開啟 GPS', 3: '定位逾時，請到窗邊後再試一次' };
+        rej(new Error(t[err.code] || '定位失敗'));
+      }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+    });
+  }
+
+  /* 打卡 */
+  function punch(type) {
+    $('btnIn').disabled = $('btnOut').disabled = true;
+    setMsg('punchMsg', '定位中，請稍候…');
+    locate().then(function (c) {
+      setMsg('punchMsg', '已取得定位，寫入中…');
+      return run('api_punch', type, c.latitude, c.longitude, c.accuracy, navigator.userAgent);
+    }).then(function (r) {
+      setMsg('punchMsg', r.type + '打卡成功 ' + r.time + '（距辦公室 ' + r.dist + ' 公尺）', 'ok');
+      renderToday(r.today);
+      loaded.mine = false;
+    }).catch(function (e) {
+      setMsg('punchMsg', errText(e), 'bad');
+    }).then(function () { $('btnIn').disabled = $('btnOut').disabled = false; });
+  }
+  $('btnIn').addEventListener('click', function () { punch('上班'); });
+  $('btnOut').addEventListener('click', function () { punch('下班'); });
+
+  /* 我的紀錄 */
+  function loadMine() {
+    $('minePunch').innerHTML = $('mineApps').innerHTML = '載入中…';
+    run('api_myMonth', $('mineMonth').value).then(function (d) {
+      loaded.mine = true;
+      $('minePunch').innerHTML = d.punches.length ? '<table><tr><th>日期</th><th>時間</th><th>類型</th><th>來源</th></tr>' +
+        d.punches.map(function (p) {
+          return '<tr><td>' + esc(p.date) + '</td><td>' + esc(p.time) + '</td><td>' + esc(p.type) + '</td><td>' + esc(p.src) + '</td></tr>';
+        }).join('') + '</table>' : '本月沒有打卡紀錄';
+      $('mineApps').innerHTML = d.apps.length ? d.apps.map(function (a) {
+        return '<div class="item"><div class="t">' + esc(a.title) + ' ' + statusTag(a.status) + '</div>' +
+          '<div class="d">' + esc(a.when) + '<br>' + esc(a.reason) + (a.comment ? '<br>審核意見：' + esc(a.comment) : '') + '</div>' +
+          (a.status === '待審核' ? '<button class="small no" data-cancel="' + esc(a.kind) + '|' + esc(a.id) + '">撤回</button>' : '') + '</div>';
+      }).join('') : '本月沒有申請紀錄';
+    }).catch(function (e) { $('minePunch').textContent = errText(e); $('mineApps').textContent = ''; });
+  }
+  $('btnMine').addEventListener('click', loadMine);
+  $('mineApps').addEventListener('click', function (ev) {
+    var v = ev.target.getAttribute('data-cancel');
+    if (!v || !confirm('確定撤回這筆申請？')) return;
+    var p = v.split('|');
+    ev.target.disabled = true;
+    run('api_cancel', p[0], p[1]).then(loadMine).catch(function (e) { alert(errText(e)); ev.target.disabled = false; });
+  });
+
+  /* 申請 */
+  function unitUI() { // 特休以天為單位，其餘假別以小時為單位
+    var day = $('lvKind').value === '特休';
+    $('lvUnit').textContent = day ? '天數（天，可填 0.5）' : '時數（小時）';
+    $('lvHours').placeholder = day ? '例如 1' : '例如 8';
+    $('lvHours').value = '';
+  }
+  $('lvKind').addEventListener('change', unitUI);
+  function submit(btnId, msgId, fn, payload, done) {
+    $(btnId).disabled = true; setMsg(msgId, '送出中…');
+    run(fn, payload).then(function (r) {
+      setMsg(msgId, '已送出，等待主管審核' + (r.warning ? '。注意：' + r.warning : ''), r.warning ? 'bad' : 'ok');
+      loaded.mine = false; if (done) done();
+    }).catch(function (e) { setMsg(msgId, errText(e), 'bad'); })
+      .then(function () { $(btnId).disabled = false; });
+  }
+  $('btnLeave').addEventListener('click', function () {
+    if (!$('lvStart').value || !$('lvEnd').value) return setMsg('lvMsg', '請填開始與結束時間', 'bad');
+    submit('btnLeave', 'lvMsg', 'api_applyLeave', {
+      kind: $('lvKind').value, start: $('lvStart').value.slice(0, 16), end: $('lvEnd').value.slice(0, 16),
+      hours: $('lvHours').value, reason: $('lvReason').value
+    }, function () { $('lvReason').value = ''; $('lvHours').value = ''; });
+  });
+  $('btnOT').addEventListener('click', function () {
+    if (!$('otDate').value || !$('otStart').value || !$('otEnd').value) return setMsg('otMsg', '請填日期與起訖時間', 'bad');
+    submit('btnOT', 'otMsg', 'api_applyOT', {
+      date: $('otDate').value, start: $('otStart').value.slice(0, 5), end: $('otEnd').value.slice(0, 5), reason: $('otReason').value
+    }, function () { $('otReason').value = ''; });
+  });
+  $('btnFix').addEventListener('click', function () {
+    if (!$('fxTime').value) return setMsg('fxMsg', '請填實際時間', 'bad');
+    submit('btnFix', 'fxMsg', 'api_applyFix', {
+      type: $('fxType').value, datetime: $('fxTime').value.slice(0, 16), reason: $('fxReason').value
+    }, function () { $('fxReason').value = ''; });
+  });
+
+  /* 主管 */
+  function loadMgr() {
+    $('pending').textContent = '載入中…';
+    run('api_dashboard').then(function (d) {
+      $('pending').innerHTML = d.pending.length ? d.pending.map(function (p) {
+        var key = esc(p.kind) + '|' + esc(p.id);
+        return '<div class="item"><div class="t">' + esc(p.name) + ' <span class="tag">' + esc(p.kindName) + '</span></div>' +
+          '<div class="d">' + esc(p.desc) + '<br>' + esc(p.reason) + '</div>' +
+          '<button class="small go" data-rev="1|' + key + '">核准</button> ' +
+          '<button class="small no" data-rev="0|' + key + '">退回</button></div>';
+      }).join('') : '目前沒有待審核的申請';
+      $('todayAll').innerHTML = '<table><tr><th>姓名</th><th>上班</th><th>下班</th><th>請假外出</th></tr>' +
+        d.today.map(function (t) {
+          return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.in || '－') + '</td><td>' + esc(t.out || '－') + '</td><td>' + esc(t.leave) + '</td></tr>';
+        }).join('') + '</table>';
+      $('officeInfo').textContent = d.office.lat ? '目前設定：' + d.office.lat + ', ' + d.office.lng + '（半徑 ' + d.office.radius + ' 公尺）' : '尚未設定辦公室座標';
+      $('staff').innerHTML = '<table><tr><th>編號</th><th>姓名</th><th>狀態</th><th></th></tr>' + d.staff.map(function (s) {
+        var st = s.locked ? '已鎖定' : (s.fresh ? '尚未首次登入' : (s.bound ? '已綁定裝置' : '未綁定'));
+        return '<tr><td>' + esc(s.id) + '</td><td>' + esc(s.name) + '</td><td>' + st + '</td><td><button class="small" data-reset="' + esc(s.id) + '">重設</button></td></tr>';
+      }).join('') + '</table>';
+    }).catch(function (e) { $('pending').textContent = errText(e); });
+  }
+  $('pending').addEventListener('click', function (ev) {
+    var v = ev.target.getAttribute('data-rev');
+    if (!v) return;
+    var p = v.split('|'), ok = p[0] === '1';
+    var comment = ok ? '' : prompt('退回原因（會顯示給申請人）：', '');
+    if (!ok && comment === null) return;
+    ev.target.disabled = true;
+    run('api_review', p[1], p[2], ok, comment || '').then(loadMgr).catch(function (e) { alert(errText(e)); loadMgr(); });
+  });
+  $('staff').addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute('data-reset');
+    if (!id || !confirm('確定重設 ' + id + ' 的密碼並解除裝置綁定？')) return;
+    run('api_resetEmployee', id).then(function (r) {
+      alert(r.name + ' 的新初始密碼：' + r.pin + '\n請轉告當事人，首次登入時須自行改密碼。');
+      loadMgr();
+    }).catch(function (e) { alert(errText(e)); });
+  });
+  $('btnRpt').addEventListener('click', function () {
+    $('btnRpt').disabled = true; setMsg('rptMsg', '產出中，約需十幾秒…');
+    run('api_monthReport', $('rptMonth').value).then(function (r) {
+      $('rptMsg').className = 'msg ok';
+      $('rptMsg').innerHTML = '月報已產出（需以試算表擁有者的 Google 帳號開啟）：<a href="' + esc(r.url) + '" target="_blank">開啟試算表</a>｜<a href="' + esc(r.xlsx) + '" target="_blank">下載 Excel</a>';
+    }).catch(function (e) { setMsg('rptMsg', errText(e), 'bad'); })
+      .then(function () { $('btnRpt').disabled = false; });
+  });
+  $('btnOffice').addEventListener('click', function () {
+    if (!confirm('確定把「目前所在位置」設為辦公室座標？')) return;
+    $('btnOffice').disabled = true; setMsg('officeMsg', '定位中…');
+    locate().then(function (c) { return run('api_setOffice', c.latitude, c.longitude, c.accuracy); })
+      .then(function (r) { setMsg('officeMsg', '已設定為 ' + r.lat + ', ' + r.lng, 'ok'); loadMgr(); })
+      .catch(function (e) { setMsg('officeMsg', errText(e), 'bad'); })
+      .then(function () { $('btnOffice').disabled = false; });
+  });
+</script>
+</body>
+</html>
