@@ -338,6 +338,12 @@
     $('lvStart').value = day + 'T08:30';
     $('lvEnd').value = day + 'T18:00';
   })();
+  function fixDefault() { // 補打卡實際時間：補打上班卡預設 08:30、補打下班卡預設 18:00；日期沿用已選的日期，未選則為今天
+    var d = new Date(), day = ($('fxTime').value || '').slice(0, 10) || (d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()));
+    $('fxTime').value = day + 'T' + ($('fxType').value === '下班' ? '18:00' : '08:30');
+  }
+  $('fxType').addEventListener('change', fixDefault);
+  fixDefault();
   function submit(btnId, msgId, fn, payload, done) {
     $(btnId).disabled = true; setMsg(msgId, '送出中…');
     run(fn, payload).then(function (r) {
