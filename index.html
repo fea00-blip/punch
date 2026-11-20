@@ -373,10 +373,28 @@
   });
 
   /* 主管 */
+  var pendingList = []; // 目前畫面上的待審核清單，供「全部核准」使用
+  function approveAll(btn) {
+    var list = pendingList.slice();
+    if (list.length < 2 || !confirm('確定核准全部 ' + list.length + ' 筆待審核申請？')) return;
+    Array.prototype.forEach.call($('pending').querySelectorAll('button'), function (b) { b.disabled = true; });
+    var done = 0, fails = [];
+    (function next() { // 逐筆送出，其中一筆失敗不影響其他筆
+      if (done >= list.length) {
+        if (fails.length) alert('已核准 ' + (list.length - fails.length) + ' 筆，' + fails.length + ' 筆未完成：\n' + fails.join('\n'));
+        return loadMgr();
+      }
+      var p = list[done];
+      btn.textContent = '核准中 ' + (done + 1) + '／' + list.length + '…';
+      run('api_review', p.kind, p.id, true, '').catch(function (e) { fails.push(p.name + ' ' + p.kindName + '：' + errText(e)); })
+        .then(function () { done++; next(); });
+    })();
+  }
   function loadMgr() {
     $('pending').textContent = '載入中…';
     run('api_dashboard').then(function (d) {
-      $('pending').innerHTML = d.pending.length ? d.pending.map(function (p) {
+      pendingList = d.pending;
+      $('pending').innerHTML = d.pending.length ? (d.pending.length > 1 ? '<button class="act" data-all="1" style="margin:0 0 6px">全部核准（' + d.pending.length + ' 筆）</button>' : '') + d.pending.map(function (p) {
         var key = esc(p.kind) + '|' + esc(p.id);
         return '<div class="item"><div class="t">' + esc(p.name) + ' <span class="tag">' + esc(p.kindName) + '</span></div>' +
           '<div class="d">' + esc(p.desc) + '<br>' + esc(p.reason) + '</div>' +
@@ -395,6 +413,7 @@
     }).catch(function (e) { $('pending').textContent = errText(e); });
   }
   $('pending').addEventListener('click', function (ev) {
+    if (ev.target.getAttribute('data-all')) return approveAll(ev.target);
     var v = ev.target.getAttribute('data-rev');
     if (!v) return;
     var p = v.split('|'), ok = p[0] === '1';
