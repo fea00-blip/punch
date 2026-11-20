@@ -107,6 +107,18 @@
 
 <section id="tab-apply">
   <div class="card">
+    <h3>補打卡</h3>
+    <div class="row2">
+      <div><label>打卡類型</label><select id="fxType"><option>上班</option><option>下班</option></select></div>
+      <div><label>補打項目</label><select id="fxItem"><option>出差補打</option><option>忘記打卡</option></select></div>
+    </div>
+    <label>實際時間</label><input type="datetime-local" id="fxTime">
+    <label>事由</label><textarea id="fxReason" rows="2"></textarea>
+    <button class="act" id="btnFix">送出補打卡申請</button>
+    <div class="msg" id="fxMsg"></div>
+    <p class="note">補打卡經主管核准後才會寫入出勤紀錄，並註記為補登與核准人。</p>
+  </div>
+  <div class="card">
     <h3>請假／外出</h3>
     <label>假別</label><select id="lvKind"></select>
     <div class="row2">
@@ -128,17 +140,6 @@
     <label>事由</label><textarea id="otReason" rows="2"></textarea>
     <button class="act" id="btnOT">送出加班申請</button>
     <div class="msg" id="otMsg"></div>
-  </div>
-  <div class="card">
-    <h3>補打卡（忘記打卡）</h3>
-    <div class="row2">
-      <div><label>類型</label><select id="fxType"><option>上班</option><option>下班</option></select></div>
-      <div><label>實際時間</label><input type="datetime-local" id="fxTime"></div>
-    </div>
-    <label>原因</label><textarea id="fxReason" rows="2"></textarea>
-    <button class="act" id="btnFix">送出補打卡申請</button>
-    <div class="msg" id="fxMsg"></div>
-    <p class="note">補打卡經主管核准後才會寫入出勤紀錄，並註記為補登與核准人。</p>
   </div>
 </section>
 
@@ -361,7 +362,7 @@
   $('btnFix').addEventListener('click', function () {
     if (!$('fxTime').value) return setMsg('fxMsg', '請填實際時間', 'bad');
     submit('btnFix', 'fxMsg', 'api_applyFix', {
-      type: $('fxType').value, datetime: $('fxTime').value.slice(0, 16), reason: $('fxReason').value
+      type: $('fxType').value, item: $('fxItem').value, datetime: $('fxTime').value.slice(0, 16), reason: $('fxReason').value
     }, function () { $('fxReason').value = ''; });
   });
 
