@@ -113,7 +113,7 @@
       <div><label>補打項目</label><select id="fxItem"><option>出差補打</option><option>忘記打卡</option></select></div>
     </div>
     <label>實際時間</label><input type="datetime-local" id="fxTime">
-    <label>事由</label><textarea id="fxReason" rows="2"></textarea>
+    <label>事由（必填）</label><textarea id="fxReason" rows="2"></textarea>
     <button class="act" id="btnFix">送出補打卡申請</button>
     <div class="msg" id="fxMsg"></div>
     <p class="note">補打卡經主管核准後才會寫入出勤紀錄，並註記為補登與核准人。</p>
@@ -367,6 +367,7 @@
   });
   $('btnFix').addEventListener('click', function () {
     if (!$('fxTime').value) return setMsg('fxMsg', '請填實際時間', 'bad');
+    if (!$('fxReason').value.trim()) return setMsg('fxMsg', '請填寫事由，至少一個字才能送出', 'bad');
     submit('btnFix', 'fxMsg', 'api_applyFix', {
       type: $('fxType').value, item: $('fxItem').value, datetime: $('fxTime').value.slice(0, 16), reason: $('fxReason').value
     }, function () { $('fxReason').value = ''; });
